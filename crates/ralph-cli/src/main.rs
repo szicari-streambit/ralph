@@ -1,6 +1,8 @@
 // ABOUTME: Ralph CLI entry point for PRD automation
 // ABOUTME: Provides subcommands: init, plan, implement, status, hook
 
+mod commands;
+
 use clap::{Parser, Subcommand};
 
 /// Ralph CLI - Automated PRD implementation using GitHub Copilot
@@ -61,36 +63,42 @@ enum HookType {
     },
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Init { dry_run } => {
-            println!("Initializing Ralph project (dry_run: {dry_run})...");
-            // TODO: Implement init command
-        }
-        Commands::Plan { slug, dry_run } => {
-            println!("Planning feature '{slug}' (dry_run: {dry_run})...");
-            // TODO: Implement plan command
-        }
+    let result = match cli.command {
+        Commands::Init { dry_run } => commands::init::run(commands::init::InitConfig {
+            dry_run,
+            verbose: cli.verbose,
+        }),
+        Commands::Plan { slug, dry_run } => commands::plan::run(commands::plan::PlanConfig {
+            slug,
+            dry_run,
+            verbose: cli.verbose,
+        }),
         Commands::Implement { slug, dry_run } => {
-            println!("Implementing feature '{slug}' (dry_run: {dry_run})...");
-            // TODO: Implement implement command
+            commands::implement::run(commands::implement::ImplementConfig {
+                slug,
+                dry_run,
+                verbose: cli.verbose,
+            })
         }
-        Commands::Status { slug } => {
-            match slug {
-                Some(s) => println!("Status for feature '{s}'..."),
-                None => println!("Status for all features..."),
-            }
-            // TODO: Implement status command
-        }
+        Commands::Status { slug } => commands::status::run(commands::status::StatusConfig {
+            slug,
+            verbose: cli.verbose,
+        }),
         Commands::Hook { hook_type } => match hook_type {
             HookType::CommitMsg { file } => {
-                println!("Validating commit message from '{file}'...");
-                // TODO: Implement commit-msg hook
+                commands::hook::commit_msg(commands::hook::CommitMsgConfig {
+                    file,
+                    verbose: cli.verbose,
+                })
             }
         },
+    };
+
+    if let Err(e) = result {
+        eprintln!("❌ Error: {}", e);
+        std::process::exit(1);
     }
 }
-
