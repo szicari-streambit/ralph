@@ -7,10 +7,9 @@ pub mod prd;
 pub mod validation;
 
 pub use error::RalphError;
-pub use ledger::Ledger;
-pub use prd::Prd;
-pub use validation::ValidationProfile;
+pub use ledger::{EventStatus, Ledger, LedgerEvent};
+pub use prd::{MarkdownPrd, Prd, Requirement, RequirementStatus};
+pub use validation::{ValidationConfig, ValidationProfile, ValidationResult, ValidationStage};
 
 /// Result type alias using RalphError
 pub type Result<T> = std::result::Result<T, RalphError>;
-
