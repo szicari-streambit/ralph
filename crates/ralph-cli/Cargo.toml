@@ -1,0 +1,24 @@
+# ABOUTME: CLI binary for Ralph PRD automation
+# ABOUTME: Provides commands: init, plan, implement, status, hook
+
+[package]
+name = "ralph-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ralph"
+path = "src/main.rs"
+
+[dependencies]
+ralph-lib = { path = "../ralph-lib" }
+clap.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+

@@ -1,0 +1,23 @@
+# ABOUTME: Core library for Ralph CLI
+# ABOUTME: Provides PRD parsing, validation, ledger, and validation profile functionality
+
+[package]
+name = "ralph-lib"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+jsonschema.workspace = true
+apache-avro.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+

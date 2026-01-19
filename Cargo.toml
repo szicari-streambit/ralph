@@ -1,0 +1,42 @@
+# ABOUTME: Cargo workspace configuration for Ralph CLI
+# ABOUTME: Contains ralph-lib (core library) and ralph-cli (binary) crates
+
+[workspace]
+members = ["crates/ralph-lib", "crates/ralph-cli"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/seanzicari/ralph"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Schema validation
+jsonschema = "0.18"
+
+# AVRO serialization
+apache-avro = "0.16"
+
+# Error handling
+thiserror = "1.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# CLI
+clap = { version = "4.0", features = ["derive"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Testing
+proptest = "1.0"
+criterion = "0.5"
+tempfile = "3.0"
+

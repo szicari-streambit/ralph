@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Ralph PRD","type":"object","unevaluatedProperties":false,"required":["schemaVersion","slug","title","activeRunId","validationProfiles","requirements"]}

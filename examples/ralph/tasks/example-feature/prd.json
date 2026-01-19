@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0","slug":"example-feature","title":"Example feature","activeRunId":"example-20260119-1","validationProfiles":["rust-cargo"],"requirements":[{"id":"REQ-01","title":"Add endpoint","status":"todo","acceptanceCriteria":["Given valid request, when calling POST /v1/example, then returns 200"]}]}
