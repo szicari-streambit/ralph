@@ -40,6 +40,7 @@ pub struct LedgerEvent {
 
 impl LedgerEvent {
     /// Create a new event with current timestamp
+    #[must_use]
     pub fn new(iteration: u32, requirement: impl Into<String>, status: EventStatus) -> Self {
         Self {
             timestamp: Utc::now(),
@@ -52,12 +53,14 @@ impl LedgerEvent {
     }
 
     /// Set validation result
+    #[must_use]
     pub fn with_validation(mut self, passed: bool) -> Self {
         self.validation_passed = Some(passed);
         self
     }
 
     /// Set message
+    #[must_use]
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
         self.message = Some(message.into());
         self
@@ -73,6 +76,7 @@ pub struct Ledger {
 
 impl Ledger {
     /// Create a new empty in-memory ledger
+    #[must_use]
     pub fn new() -> Self {
         Self {
             path: None,
@@ -81,6 +85,10 @@ impl Ledger {
     }
 
     /// Load an existing ledger from a JSONL file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or contains invalid JSON.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let mut events = Vec::new();
@@ -108,6 +116,10 @@ impl Ledger {
     }
 
     /// Create a new ledger at the given path (creates file if not exists)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory cannot be created or the file cannot be opened.
     pub fn create(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         if let Some(parent) = path.parent() {
@@ -126,11 +138,16 @@ impl Ledger {
     }
 
     /// Get all events
+    #[must_use]
     pub fn events(&self) -> &[LedgerEvent] {
         &self.events
     }
 
     /// Append a new event to the ledger
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the event cannot be serialized or written to the file.
     pub fn append(&mut self, event: LedgerEvent) -> Result<()> {
         // First, append to file atomically if we have a path
         if let Some(ref path) = self.path {
@@ -147,11 +164,13 @@ impl Ledger {
     }
 
     /// Get the latest iteration number
+    #[must_use]
     pub fn latest_iteration(&self) -> u32 {
         self.events.iter().map(|e| e.iteration).max().unwrap_or(0)
     }
 
     /// Get events for a specific requirement
+    #[must_use]
     pub fn events_for_requirement(&self, req_id: &str) -> Vec<&LedgerEvent> {
         self.events
             .iter()
@@ -160,6 +179,7 @@ impl Ledger {
     }
 
     /// Check if the last event for a requirement was a failure
+    #[must_use]
     pub fn is_requirement_failed(&self, req_id: &str) -> bool {
         self.events_for_requirement(req_id)
             .last()
@@ -167,6 +187,7 @@ impl Ledger {
     }
 
     /// Get the count of iterations where full tests were run
+    #[must_use]
     pub fn full_test_count(&self) -> usize {
         self.events
             .iter()
@@ -176,6 +197,10 @@ impl Ledger {
     }
 
     /// Export ledger to AVRO format for schema evolution
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the AVRO schema is invalid or serialization fails.
     pub fn to_avro(&self) -> Result<Vec<u8>> {
         use apache_avro::{types::Record, Schema, Writer};
 
@@ -220,6 +245,10 @@ impl Ledger {
     }
 
     /// Save ledger to AVRO file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if AVRO serialization fails or the file cannot be written.
     pub fn save_avro(&self, path: impl AsRef<Path>) -> Result<()> {
         let data = self.to_avro()?;
         std::fs::write(path, data)?;
@@ -378,5 +407,59 @@ mod tests {
 
         let data = std::fs::read(temp.path()).unwrap();
         assert!(!data.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn arb_event_status() -> impl Strategy<Value = EventStatus> {
+        prop_oneof![
+            Just(EventStatus::Started),
+            Just(EventStatus::Done),
+            Just(EventStatus::Failed),
+        ]
+    }
+
+    fn arb_ledger_event() -> impl Strategy<Value = LedgerEvent> {
+        (1u32..100, "REQ-[0-9]{2}", arb_event_status())
+            .prop_map(|(iteration, requirement, status)| {
+                LedgerEvent::new(iteration, &requirement, status)
+            })
+    }
+
+    proptest! {
+        #[test]
+        fn ledger_event_json_roundtrip(event in arb_ledger_event()) {
+            let json = serde_json::to_string(&event).unwrap();
+            let parsed: LedgerEvent = serde_json::from_str(&json).unwrap();
+            prop_assert_eq!(event.iteration, parsed.iteration);
+            prop_assert_eq!(event.requirement, parsed.requirement);
+            prop_assert_eq!(event.status, parsed.status);
+        }
+
+        #[test]
+        fn ledger_preserves_order(events in prop::collection::vec(arb_ledger_event(), 1..10)) {
+            let mut ledger = Ledger::new();
+            for event in &events {
+                ledger.append(event.clone()).unwrap();
+            }
+            prop_assert_eq!(ledger.events().len(), events.len());
+            for (i, event) in events.iter().enumerate() {
+                prop_assert_eq!(&ledger.events()[i].requirement, &event.requirement);
+            }
+        }
+
+        #[test]
+        fn latest_iteration_is_max(events in prop::collection::vec(arb_ledger_event(), 1..10)) {
+            let mut ledger = Ledger::new();
+            for event in &events {
+                ledger.append(event.clone()).unwrap();
+            }
+            let max_iter = events.iter().map(|e| e.iteration).max().unwrap_or(0);
+            prop_assert_eq!(ledger.latest_iteration(), max_iter);
+        }
     }
 }

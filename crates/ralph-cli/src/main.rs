@@ -67,29 +67,29 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Init { dry_run } => commands::init::run(commands::init::InitConfig {
+        Commands::Init { dry_run } => commands::init::run(&commands::init::InitConfig {
             dry_run,
             verbose: cli.verbose,
         }),
-        Commands::Plan { slug, dry_run } => commands::plan::run(commands::plan::PlanConfig {
+        Commands::Plan { slug, dry_run } => commands::plan::run(&commands::plan::PlanConfig {
             slug,
             dry_run,
             verbose: cli.verbose,
         }),
         Commands::Implement { slug, dry_run } => {
-            commands::implement::run(commands::implement::ImplementConfig {
+            commands::implement::run(&commands::implement::ImplementConfig {
                 slug,
                 dry_run,
                 verbose: cli.verbose,
             })
         }
-        Commands::Status { slug } => commands::status::run(commands::status::StatusConfig {
+        Commands::Status { slug } => commands::status::run(&commands::status::StatusConfig {
             slug,
             verbose: cli.verbose,
         }),
         Commands::Hook { hook_type } => match hook_type {
             HookType::CommitMsg { file } => {
-                commands::hook::commit_msg(commands::hook::CommitMsgConfig {
+                commands::hook::commit_msg(&commands::hook::CommitMsgConfig {
                     file,
                     verbose: cli.verbose,
                 })
@@ -98,7 +98,7 @@ fn main() {
     };
 
     if let Err(e) = result {
-        eprintln!("❌ Error: {}", e);
+        eprintln!("❌ Error: {e}");
         std::process::exit(1);
     }
 }

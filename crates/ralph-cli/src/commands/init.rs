@@ -12,11 +12,11 @@ pub struct InitConfig {
 }
 
 /// Initialize a new Ralph project
-pub fn run(config: InitConfig) -> Result<()> {
+pub fn run(config: &InitConfig) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if config.verbose {
-        println!("Initializing Ralph project in {:?}", cwd);
+        println!("Initializing Ralph project in {}", cwd.display());
     }
 
     // Create directory structure
@@ -44,27 +44,27 @@ pub fn run(config: InitConfig) -> Result<()> {
         &cwd,
         ".github/agents/ralph-planner.agent.md",
         RALPH_PLANNER_TEMPLATE,
-        &config,
+        config,
     )?;
 
     create_template_file(
         &cwd,
         ".github/agents/ralph-implementer.agent.md",
         RALPH_IMPLEMENTER_TEMPLATE,
-        &config,
+        config,
     )?;
 
     create_template_file(
         &cwd,
         ".githooks/commit-msg",
         COMMIT_MSG_HOOK_TEMPLATE,
-        &config,
+        config,
     )?;
 
     // Create validation.json if it doesn't exist
     let validation_path = cwd.join("ralph/validation.json");
     if !validation_path.exists() || config.dry_run {
-        create_template_file(&cwd, "ralph/validation.json", VALIDATION_JSON_TEMPLATE, &config)?;
+        create_template_file(&cwd, "ralph/validation.json", VALIDATION_JSON_TEMPLATE, config)?;
     }
 
     // Set commit-msg hook as executable

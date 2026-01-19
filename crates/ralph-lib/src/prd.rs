@@ -50,27 +50,47 @@ pub struct Prd {
 
 impl Prd {
     /// Load a PRD from a JSON file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or contains invalid JSON.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())?;
         Self::from_json(&content)
     }
 
     /// Parse a PRD from a JSON string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JSON is invalid.
     pub fn from_json(json: &str) -> Result<Self> {
         serde_json::from_str(json).map_err(RalphError::from)
     }
 
     /// Serialize the PRD to a JSON string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(self).map_err(RalphError::from)
     }
 
     /// Serialize the PRD to a pretty-printed JSON string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn to_json_pretty(&self) -> Result<String> {
         serde_json::to_string_pretty(self).map_err(RalphError::from)
     }
 
     /// Save the PRD to a JSON file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails or the file cannot be written.
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let json = self.to_json_pretty()?;
         std::fs::write(path.as_ref(), json)?;
@@ -78,6 +98,10 @@ impl Prd {
     }
 
     /// Validate this PRD against the JSON schema
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the schema file cannot be read or validation fails.
     pub fn validate_schema(&self, schema_path: impl AsRef<Path>) -> Result<()> {
         let schema_content = std::fs::read_to_string(schema_path.as_ref())?;
         let schema: serde_json::Value = serde_json::from_str(&schema_content)?;
@@ -94,15 +118,18 @@ impl Prd {
     }
 
     /// Generate markdown documentation for this PRD
+    #[must_use]
     pub fn to_markdown(&self) -> String {
+        use std::fmt::Write;
         let mut md = String::new();
-        md.push_str(&format!("# {}\n\n", self.title));
-        md.push_str(&format!("**Slug:** `{}`\n\n", self.slug));
-        md.push_str(&format!("**Run ID:** `{}`\n\n", self.active_run_id));
-        md.push_str(&format!(
-            "**Validation Profiles:** {}\n\n",
+        let _ = writeln!(md, "# {}\n", self.title);
+        let _ = writeln!(md, "**Slug:** `{}`\n", self.slug);
+        let _ = writeln!(md, "**Run ID:** `{}`\n", self.active_run_id);
+        let _ = writeln!(
+            md,
+            "**Validation Profiles:** {}\n",
             self.validation_profiles.join(", ")
-        ));
+        );
         md.push_str("## Requirements\n\n");
 
         for req in &self.requirements {
@@ -112,13 +139,10 @@ impl Prd {
                 RequirementStatus::Done => "✅",
                 RequirementStatus::Blocked => "🚫",
             };
-            md.push_str(&format!(
-                "### {} {} - {}\n\n",
-                status_icon, req.id, req.title
-            ));
+            let _ = writeln!(md, "### {} {} - {}\n", status_icon, req.id, req.title);
             md.push_str("**Acceptance Criteria:**\n\n");
             for ac in &req.acceptance_criteria {
-                md.push_str(&format!("- {ac}\n"));
+                let _ = writeln!(md, "- {ac}");
             }
             md.push('\n');
         }
@@ -136,13 +160,16 @@ impl Prd {
     }
 
     /// Generate markdown with RALPH markers for managed sections
+    #[must_use]
     pub fn to_markdown_with_markers(&self, planning_log: Option<&str>) -> String {
+        use std::fmt::Write;
         let mut md = String::new();
-        md.push_str(&format!("# {}\n\n", self.title));
-        md.push_str(&format!(
-            "Canonical machine PRD: ralph/tasks/{}/prd.json\n\n",
+        let _ = writeln!(md, "# {}\n", self.title);
+        let _ = writeln!(
+            md,
+            "Canonical machine PRD: ralph/tasks/{}/prd.json\n",
             self.slug
-        ));
+        );
 
         // Planning log section
         md.push_str("<!-- RALPH:BEGIN PLANNING_LOG -->\n");
@@ -158,6 +185,10 @@ impl Prd {
     }
 
     /// Save markdown PRD to a file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory cannot be created or the file cannot be written.
     pub fn save_markdown(&self, path: impl AsRef<Path>, planning_log: Option<&str>) -> Result<()> {
         let md = self.to_markdown_with_markers(planning_log);
         if let Some(parent) = path.as_ref().parent() {
@@ -175,22 +206,29 @@ pub struct MarkdownPrd {
 
 impl MarkdownPrd {
     /// Load from an existing markdown file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())?;
         Ok(Self { content })
     }
 
     /// Create with initial content
+    #[must_use]
     pub fn new(content: String) -> Self {
         Self { content }
     }
 
     /// Get the current content
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.content
     }
 
     /// Extract content from a marked section
+    #[must_use]
     pub fn get_section(&self, marker: &str) -> Option<&str> {
         let begin = format!("<!-- RALPH:BEGIN {marker} -->");
         let end = format!("<!-- RALPH:END {marker} -->");
@@ -209,28 +247,31 @@ impl MarkdownPrd {
 
     /// Append to a marked section (preserves existing content)
     pub fn append_to_section(&mut self, marker: &str, text: &str) {
+        use std::fmt::Write;
         let begin = format!("<!-- RALPH:BEGIN {marker} -->");
         let end = format!("<!-- RALPH:END {marker} -->");
 
         if let Some(end_idx) = self.content.find(&end) {
             // Insert before the END marker
             let insert_pos = end_idx;
-            let new_line = if !self.content[..insert_pos].ends_with('\n') {
-                "\n"
-            } else {
+            let new_line = if self.content[..insert_pos].ends_with('\n') {
                 ""
+            } else {
+                "\n"
             };
             self.content
                 .insert_str(insert_pos, &format!("{new_line}{text}\n"));
         } else {
             // Section doesn't exist - add it at the end
-            self.content.push_str(&format!(
-                "\n{begin}\n{text}\n{end}\n"
-            ));
+            let _ = write!(self.content, "\n{begin}\n{text}\n{end}\n");
         }
     }
 
     /// Save to file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory cannot be created or the file cannot be written.
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         if let Some(parent) = path.as_ref().parent() {
             std::fs::create_dir_all(parent)?;
@@ -359,5 +400,76 @@ mod tests {
         assert!(md.content().contains("<!-- RALPH:BEGIN NEW_SECTION -->"));
         assert!(md.content().contains("New content"));
         assert!(md.content().contains("<!-- RALPH:END NEW_SECTION -->"));
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn arb_requirement_status() -> impl Strategy<Value = RequirementStatus> {
+        prop_oneof![
+            Just(RequirementStatus::Todo),
+            Just(RequirementStatus::InProgress),
+            Just(RequirementStatus::Done),
+            Just(RequirementStatus::Blocked),
+        ]
+    }
+
+    fn arb_requirement() -> impl Strategy<Value = Requirement> {
+        (
+            "[A-Z]{3}-[0-9]{2}",
+            "[a-z ]{5,20}",
+            arb_requirement_status(),
+            prop::collection::vec("[a-z ]{10,30}", 1..3),
+        )
+            .prop_map(|(id, title, status, criteria)| Requirement {
+                id,
+                title,
+                status,
+                acceptance_criteria: criteria,
+            })
+    }
+
+    fn arb_prd() -> impl Strategy<Value = Prd> {
+        (
+            "[a-z-]{5,15}",
+            "[A-Za-z ]{5,20}",
+            "[a-z0-9-]{10,20}",
+            prop::collection::vec(arb_requirement(), 1..5),
+        )
+            .prop_map(|(slug, title, run_id, requirements)| Prd {
+                schema_version: "1.0".to_string(),
+                slug,
+                title,
+                active_run_id: run_id,
+                validation_profiles: vec!["rust-cargo".to_string()],
+                requirements,
+            })
+    }
+
+    proptest! {
+        #[test]
+        fn prd_json_roundtrip(prd in arb_prd()) {
+            let json = prd.to_json().unwrap();
+            let parsed = Prd::from_json(&json).unwrap();
+            prop_assert_eq!(prd, parsed);
+        }
+
+        #[test]
+        fn requirement_status_roundtrip(status in arb_requirement_status()) {
+            let json = serde_json::to_string(&status).unwrap();
+            let parsed: RequirementStatus = serde_json::from_str(&json).unwrap();
+            prop_assert_eq!(status, parsed);
+        }
+
+        #[test]
+        fn prd_markdown_contains_requirements(prd in arb_prd()) {
+            let md = prd.to_markdown();
+            for req in &prd.requirements {
+                prop_assert!(md.contains(&req.id));
+            }
+        }
     }
 }

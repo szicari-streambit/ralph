@@ -15,7 +15,7 @@ pub struct ImplementConfig {
 }
 
 /// Run the implementation loop
-pub fn run(config: ImplementConfig) -> Result<()> {
+pub fn run(config: &ImplementConfig) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let task_dir = cwd.join("ralph/tasks").join(&config.slug);
     let prd_path = task_dir.join("prd.json");
@@ -81,7 +81,7 @@ pub fn run(config: ImplementConfig) -> Result<()> {
 
     if config.dry_run {
         println!("[dry-run] Would run implementation for {}", req.id);
-        println!("[dry-run] Would run validation (full_tests: {})", run_full_tests);
+        println!("[dry-run] Would run validation (full_tests: {run_full_tests})");
         return Ok(());
     }
 
@@ -133,9 +133,9 @@ pub fn run(config: ImplementConfig) -> Result<()> {
     )?;
 
     if validation_passed {
-        println!("✅ Iteration {} complete", iteration);
+        println!("✅ Iteration {iteration} complete");
     } else {
-        println!("❌ Iteration {} failed validation", iteration);
+        println!("❌ Iteration {iteration} failed validation");
     }
 
     Ok(())
@@ -154,7 +154,7 @@ fn generate_prompt(prd: &Prd, req: &ralph_lib::Requirement, iteration: u32, run_
         req.title,
         req.acceptance_criteria
             .iter()
-            .map(|ac| format!("- {}", ac))
+            .map(|ac| format!("- {ac}"))
             .collect::<Vec<_>>()
             .join("\n"),
         if run_full_tests { " -> test" } else { "" }
@@ -181,7 +181,7 @@ fn launch_copilot_implementer(working_dir: &Path, prompt: &str) -> bool {
             if e.kind() == std::io::ErrorKind::NotFound {
                 println!("❌ Error: 'copilot' command not found");
             } else {
-                println!("❌ Error launching copilot: {}", e);
+                println!("❌ Error launching copilot: {e}");
             }
             false
         }
@@ -215,22 +215,22 @@ fn ensure_branch(branch_name: &str, dry_run: bool, verbose: bool) -> Result<()> 
 
     if current_branch == branch_name {
         if verbose {
-            println!("Already on branch: {}", branch_name);
+            println!("Already on branch: {branch_name}");
         }
         return Ok(());
     }
 
     if dry_run {
         if branch_exists {
-            println!("[dry-run] Would checkout branch: {}", branch_name);
+            println!("[dry-run] Would checkout branch: {branch_name}");
         } else {
-            println!("[dry-run] Would create and checkout branch: {}", branch_name);
+            println!("[dry-run] Would create and checkout branch: {branch_name}");
         }
         return Ok(());
     }
 
     if branch_exists {
-        println!("📌 Checking out branch: {}", branch_name);
+        println!("📌 Checking out branch: {branch_name}");
         let status = Command::new("git")
             .args(["checkout", branch_name])
             .status()?;
@@ -238,7 +238,7 @@ fn ensure_branch(branch_name: &str, dry_run: bool, verbose: bool) -> Result<()> 
             println!("⚠️  Failed to checkout branch, continuing on current branch");
         }
     } else {
-        println!("🌿 Creating branch: {}", branch_name);
+        println!("🌿 Creating branch: {branch_name}");
         let status = Command::new("git")
             .args(["checkout", "-b", branch_name])
             .status()?;

@@ -12,7 +12,7 @@ pub struct StatusConfig {
 }
 
 /// Show status of PRD requirements and ledger
-pub fn run(config: StatusConfig) -> Result<()> {
+pub fn run(config: &StatusConfig) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let tasks_dir = cwd.join("ralph/tasks");
 
@@ -21,8 +21,8 @@ pub fn run(config: StatusConfig) -> Result<()> {
         return Ok(());
     }
 
-    match config.slug {
-        Some(slug) => show_feature_status(&cwd, &slug, config.verbose)?,
+    match &config.slug {
+        Some(slug) => show_feature_status(&cwd, slug, config.verbose)?,
         None => show_all_features(&tasks_dir, config.verbose)?,
     }
 
@@ -55,7 +55,7 @@ fn show_all_features(tasks_dir: &Path, verbose: bool) -> Result<()> {
                 Ok(prd) => {
                     let (done, total) = count_requirements(&prd);
                     let progress = if total > 0 {
-                        format!("{}/{}", done, total)
+                        format!("{done}/{total}")
                     } else {
                         "0/0".to_string()
                     };
@@ -73,7 +73,7 @@ fn show_all_features(tasks_dir: &Path, verbose: bool) -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    println!("  ❓ {} (error: {})", slug, e);
+                    println!("  ❓ {slug} (error: {e})");
                 }
             }
         }
@@ -88,7 +88,7 @@ fn show_feature_status(cwd: &Path, slug: &str, verbose: bool) -> Result<()> {
     let ledger_path = task_dir.join("ledger.jsonl");
 
     if !prd_path.exists() {
-        println!("❌ Feature '{}' not found", slug);
+        println!("❌ Feature '{slug}' not found");
         return Ok(());
     }
 
@@ -111,7 +111,7 @@ fn show_feature_status(cwd: &Path, slug: &str, verbose: bool) -> Result<()> {
         );
         if verbose {
             for ac in &req.acceptance_criteria {
-                println!("      • {}", ac);
+                println!("      • {ac}");
             }
         }
     }
@@ -137,8 +137,7 @@ fn show_feature_status(cwd: &Path, slug: &str, verbose: bool) -> Result<()> {
                         event.status,
                         event
                             .validation_passed
-                            .map(|v| if v { " ✅" } else { " ❌" })
-                            .unwrap_or("")
+                            .map_or("", |v| if v { " ✅" } else { " ❌" })
                     );
                 }
             }

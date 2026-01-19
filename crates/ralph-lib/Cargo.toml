@@ -20,4 +20,9 @@ tokio.workspace = true
 [dev-dependencies]
 proptest.workspace = true
 tempfile.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "benchmarks"
+harness = false
 

@@ -13,7 +13,7 @@ pub struct CommitMsgConfig {
 }
 
 /// Validate commit message references a requirement
-pub fn commit_msg(config: CommitMsgConfig) -> Result<()> {
+pub fn commit_msg(config: &CommitMsgConfig) -> Result<()> {
     let message = fs::read_to_string(&config.file)?;
 
     if config.verbose {
@@ -43,10 +43,10 @@ pub fn commit_msg(config: CommitMsgConfig) -> Result<()> {
         let valid_reqs = collect_all_requirement_ids(&tasks_dir)?;
 
         for req_ref in &refs {
-            if !valid_reqs.contains(&req_ref.to_string()) {
-                eprintln!("⚠️  Warning: {} not found in any PRD", req_ref);
+            if !valid_reqs.contains(&(*req_ref).to_string()) {
+                eprintln!("⚠️  Warning: {req_ref} not found in any PRD");
             } else if config.verbose {
-                println!("✅ Found valid requirement: {}", req_ref);
+                println!("✅ Found valid requirement: {req_ref}");
             }
         }
     }

@@ -18,6 +18,7 @@ pub struct DetectRules {
 
 impl DetectRules {
     /// Check if the detection rules match for the given directory
+    #[must_use]
     pub fn matches(&self, dir: impl AsRef<Path>) -> bool {
         let dir = dir.as_ref();
         self.any_files_exist
@@ -67,11 +68,13 @@ pub enum ValidationStage {
 
 impl ValidationStage {
     /// Get all stages in order
+    #[must_use]
     pub fn all() -> &'static [Self] {
         &[Self::Fmt, Self::Lint, Self::Typecheck, Self::Test]
     }
 
     /// Get short-circuit stages (no test)
+    #[must_use]
     pub fn short_circuit() -> &'static [Self] {
         &[Self::Fmt, Self::Lint, Self::Typecheck]
     }
@@ -88,6 +91,7 @@ pub struct ValidationProfile {
 
 impl ValidationProfile {
     /// Get commands for a specific stage
+    #[must_use]
     pub fn commands_for_stage(&self, stage: ValidationStage) -> &[String] {
         match stage {
             ValidationStage::Fmt => &self.commands.fmt,
@@ -98,6 +102,7 @@ impl ValidationProfile {
     }
 
     /// Run validation commands for a stage
+    #[must_use]
     pub fn run_stage(&self, stage: ValidationStage, cwd: impl AsRef<Path>) -> ValidationResult {
         let commands = self.commands_for_stage(stage);
         let cwd = cwd.as_ref();
@@ -136,12 +141,10 @@ impl ValidationProfile {
     }
 
     /// Run all validation stages with short-circuit on failure
+    ///
     /// If `include_tests` is true, runs all stages. Otherwise skips test stage.
-    pub fn run_all(
-        &self,
-        cwd: impl AsRef<Path>,
-        include_tests: bool,
-    ) -> Vec<ValidationResult> {
+    #[must_use]
+    pub fn run_all(&self, cwd: impl AsRef<Path>, include_tests: bool) -> Vec<ValidationResult> {
         let cwd = cwd.as_ref();
         let stages = if include_tests {
             ValidationStage::all()
@@ -183,17 +186,26 @@ pub struct ValidationConfig {
 
 impl ValidationConfig {
     /// Load validation config from a JSON file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or contains invalid JSON.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())?;
         Self::from_json(&content)
     }
 
     /// Parse validation config from JSON string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JSON is invalid.
     pub fn from_json(json: &str) -> Result<Self> {
         serde_json::from_str(json).map_err(RalphError::from)
     }
 
     /// Detect which profiles apply to the given directory
+    #[must_use]
     pub fn detect_profiles(&self, dir: impl AsRef<Path>) -> Vec<&str> {
         let dir = dir.as_ref();
         self.profiles
@@ -204,6 +216,7 @@ impl ValidationConfig {
     }
 
     /// Get a profile by name
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&ValidationProfile> {
         self.profiles.get(name)
     }

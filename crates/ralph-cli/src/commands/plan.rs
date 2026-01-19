@@ -14,7 +14,7 @@ pub struct PlanConfig {
 }
 
 /// Start or resume a planning session
-pub fn run(config: PlanConfig) -> Result<()> {
+pub fn run(config: &PlanConfig) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let task_dir = cwd.join("ralph/tasks").join(&config.slug);
     let prd_path = task_dir.join("prd.json");
@@ -54,10 +54,10 @@ pub fn run(config: PlanConfig) -> Result<()> {
     };
 
     // Create or update markdown PRD
-    if !config.dry_run {
-        ensure_markdown_prd(&prd, &md_path)?;
-    } else {
+    if config.dry_run {
         println!("[dry-run] Would update markdown: {}", md_path.display());
+    } else {
+        ensure_markdown_prd(&prd, &md_path)?;
     }
 
     // Launch Copilot planning session
@@ -87,7 +87,7 @@ fn create_initial_prd(slug: &str) -> Prd {
     Prd {
         schema_version: "1.0".to_string(),
         slug: slug.to_string(),
-        title: slug.replace('-', " ").to_string(),
+        title: slug.replace('-', " "),
         active_run_id: run_id,
         validation_profiles: vec!["rust-cargo".to_string()],
         requirements: vec![Requirement {
@@ -127,7 +127,7 @@ fn launch_copilot_planner(working_dir: &Path) -> Result<()> {
             if exit_status.success() {
                 println!("✅ Planning session completed");
             } else {
-                println!("⚠️  Planning session exited with status: {}", exit_status);
+                println!("⚠️  Planning session exited with status: {exit_status}");
             }
         }
         Err(e) => {
