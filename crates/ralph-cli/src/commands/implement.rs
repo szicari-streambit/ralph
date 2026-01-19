@@ -29,12 +29,24 @@ pub fn run(config: ImplementConfig) -> Result<()> {
         return Ok(());
     }
 
+    // Check for uncommitted changes
+    if has_uncommitted_changes() {
+        println!("⚠️  Warning: You have uncommitted changes");
+        if config.verbose {
+            println!("   Consider committing or stashing before implementation");
+        }
+    }
+
     let mut prd = Prd::from_file(&prd_path)?;
     let mut ledger = if ledger_path.exists() {
         Ledger::from_file(&ledger_path)?
     } else {
         Ledger::create(&ledger_path)?
     };
+
+    // Ensure we're on the correct branch
+    let branch_name = format!("ralph/{}/{}", config.slug, prd.active_run_id);
+    ensure_branch(&branch_name, config.dry_run, config.verbose)?;
 
     // Load validation config
     let validation_config = if validation_path.exists() {
@@ -176,3 +188,64 @@ fn launch_copilot_implementer(working_dir: &Path, prompt: &str) -> bool {
     }
 }
 
+fn has_uncommitted_changes() -> bool {
+    Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .map(|output| !output.stdout.is_empty())
+        .unwrap_or(false)
+}
+
+fn ensure_branch(branch_name: &str, dry_run: bool, verbose: bool) -> Result<()> {
+    // Check if branch exists
+    let branch_exists = Command::new("git")
+        .args(["rev-parse", "--verify", branch_name])
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+
+    // Get current branch
+    let current_branch = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .ok()
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+
+    if current_branch == branch_name {
+        if verbose {
+            println!("Already on branch: {}", branch_name);
+        }
+        return Ok(());
+    }
+
+    if dry_run {
+        if branch_exists {
+            println!("[dry-run] Would checkout branch: {}", branch_name);
+        } else {
+            println!("[dry-run] Would create and checkout branch: {}", branch_name);
+        }
+        return Ok(());
+    }
+
+    if branch_exists {
+        println!("📌 Checking out branch: {}", branch_name);
+        let status = Command::new("git")
+            .args(["checkout", branch_name])
+            .status()?;
+        if !status.success() {
+            println!("⚠️  Failed to checkout branch, continuing on current branch");
+        }
+    } else {
+        println!("🌿 Creating branch: {}", branch_name);
+        let status = Command::new("git")
+            .args(["checkout", "-b", branch_name])
+            .status()?;
+        if !status.success() {
+            println!("⚠️  Failed to create branch, continuing on current branch");
+        }
+    }
+
+    Ok(())
+}
