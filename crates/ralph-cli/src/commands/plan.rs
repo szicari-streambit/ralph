@@ -71,7 +71,7 @@ pub fn run(config: &PlanConfig) -> Result<()> {
         println!("Markdown doc: {}", md_path.display());
         println!();
 
-        launch_copilot_planner(&task_dir)?;
+        launch_copilot_planner(&cwd, &config.slug, &prd_path, &md_path)?;
     }
 
     Ok(())
@@ -116,10 +116,32 @@ fn ensure_markdown_prd(prd: &Prd, md_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn launch_copilot_planner(working_dir: &Path) -> Result<()> {
+fn launch_copilot_planner(
+    repo_root: &Path,
+    slug: &str,
+    prd_path: &Path,
+    md_path: &Path,
+) -> Result<()> {
+    // Build initial prompt with context so user doesn't have to provide it
+    let prompt = format!(
+        "You are planning feature '{slug}'. \
+         The PRD JSON is at @{prd} and the markdown doc is at @{md}. \
+         Please read the PRD and begin the planning session.",
+        slug = slug,
+        prd = prd_path.display(),
+        md = md_path.display()
+    );
+
+    // Run copilot from repo root so it finds .github/agents/
     let status = Command::new("copilot")
-        .args(["--agent=ralph-planner", "--model", "claude-opus-4.5"])
-        .current_dir(working_dir)
+        .args([
+            "--agent=ralph-planner",
+            "--model",
+            "claude-opus-4.5",
+            "--interactive",
+            &prompt,
+        ])
+        .current_dir(repo_root)
         .status();
 
     match status {
