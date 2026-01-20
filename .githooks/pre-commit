@@ -7,20 +7,25 @@ set -euo pipefail
 echo "Running pre-commit checks: fmt -> lint -> typecheck"
 
 # Run fmt
-if ! command -v cargo >/dev/null 2>&1 || ! cargo fmt --all -- --check; then
-  echo "fmt failed or cargo not available" >&2
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "cargo not available" >&2
+  exit 1
+fi
+
+if ! cargo fmt --all -- --check; then
+  echo "fmt failed" >&2
   exit 1
 fi
 
 # Run lint
-if ! command -v cargo >/dev/null 2>&1 || ! cargo clippy --all-targets --all-features -- -D warnings; then
-  echo "lint failed or cargo not available" >&2
+if ! cargo clippy --all-targets --all-features -- -D warnings; then
+  echo "lint failed" >&2
   exit 1
 fi
 
 # Run typecheck
-if ! command -v cargo >/dev/null 2>&1 || ! cargo check --all-targets --all-features; then
-  echo "typecheck failed or cargo not available" >&2
+if ! cargo check --all-targets --all-features; then
+  echo "typecheck failed" >&2
   exit 1
 fi
 
