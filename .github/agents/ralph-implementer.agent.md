@@ -46,11 +46,36 @@ Each iteration MUST append a ledger event with:
 
 The ledger is append-only - never modify or delete existing entries.
 
+## Handling Validation Failures
+
+**CRITICAL**: The Ralph loop provides validation feedback from previous iterations. When you receive a prompt:
+
+1. **Check for validation failure warnings**: Look for "⚠️ PREVIOUS ITERATION FAILED VALIDATION" in your prompt
+2. **Read the validation output carefully**: The exact error messages from cargo fmt/clippy/test are included
+3. **Fix the root cause**: Don't just implement the requirement - fix what broke in the previous iteration first
+4. **Common validation failures**:
+   - **fmt failures**: Run `cargo fmt --all` before completing your work
+   - **lint failures**: Address clippy warnings, don't suppress them without good reason
+   - **typecheck failures**: Fix type errors, missing imports, or API mismatches
+   - **test failures**: Fix broken tests, don't skip or delete them
+
+## Required Actions Before Completion
+
+Before marking any work as complete, you MUST:
+
+1. **Run cargo fmt**: Execute `cargo fmt --all` to ensure code is properly formatted
+2. **Make scripts executable**: If acceptance criteria require a script to be executable, run `chmod +x <script-path>`
+3. **Verify file permissions**: Check that created files have correct permissions (especially hooks and scripts)
+4. **Run validation locally**: Don't rely on the outer loop - verify your changes pass validation
+5. **Read error messages**: If validation fails, read the FULL error output to understand what's wrong
+
 ## Best Practices
 
-- Read the PRD JSON file to understand current requirements and their status
-- Check validation profiles to understand which validation commands to run
-- Always verify changes compile and pass validation before updating PRD status
-- Keep implementation focused and incremental
-- Document any blockers or issues in ledger messages
-- Maintain clean commit history with descriptive messages
+- **Read the PRD JSON file** to understand current requirements and their status
+- **Check validation profiles** to understand which validation commands to run
+- **Always verify changes compile and pass validation** before updating PRD status
+- **Keep implementation focused and incremental** - one requirement at a time
+- **Document any blockers or issues** in ledger messages
+- **Maintain clean commit history** with descriptive messages
+- **Learn from previous iterations**: If iteration > 1, check the ledger for past failures
+- **Fix validation errors immediately**: Don't proceed with new work if validation is failing
