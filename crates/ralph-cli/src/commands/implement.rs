@@ -12,6 +12,10 @@ pub struct ImplementConfig {
     pub slug: String,
     pub dry_run: bool,
     pub verbose: bool,
+    /// Enable continuous looping until success or max iterations (default: true)
+    pub loop_enabled: bool,
+    /// Maximum number of iterations before stopping (default: 10)
+    pub max_iterations: u32,
 }
 
 /// Run the implementation loop
@@ -62,6 +66,71 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
         println!("Current iteration: {}", ledger.latest_iteration() + 1);
     }
 
+    if config.loop_enabled {
+        // Autonomous loop mode - iterate until success or max iterations
+        let mut iteration_count = 0;
+        loop {
+            iteration_count += 1;
+
+            // Check safety limit
+            if iteration_count > config.max_iterations {
+                println!(
+                    "⛔ Max iterations ({}) reached - stopping",
+                    config.max_iterations
+                );
+                break;
+            }
+
+            // Run one iteration
+            let validation_passed = run_single_iteration(
+                config,
+                &cwd,
+                &prd_path,
+                &mut prd,
+                &mut ledger,
+                validation_config.as_ref(),
+            )?;
+
+            if validation_passed {
+                println!("✅ Task complete!");
+                break;
+            }
+
+            // Validation failed - loop will retry automatically
+            if iteration_count < config.max_iterations {
+                println!(
+                    "🔄 Validation failed, retrying (attempt {}/{})",
+                    iteration_count + 1,
+                    config.max_iterations
+                );
+            }
+        }
+    } else {
+        // Single iteration mode (--once flag)
+        run_single_iteration(
+            config,
+            &cwd,
+            &prd_path,
+            &mut prd,
+            &mut ledger,
+            validation_config.as_ref(),
+        )?;
+    }
+
+    Ok(())
+}
+
+/// Run a single iteration of the implementation loop
+///
+/// Returns Ok(true) if validation passed, Ok(false) if validation failed
+fn run_single_iteration(
+    config: &ImplementConfig,
+    cwd: &Path,
+    prd_path: &Path,
+    prd: &mut Prd,
+    ledger: &mut Ledger,
+    validation_config: Option<&ValidationConfig>,
+) -> Result<bool> {
     // Find next requirement to implement
     let next_req = prd
         .requirements
@@ -71,51 +140,60 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
 
     let Some(req) = next_req else {
         println!("✅ All requirements are complete!");
-        return Ok(());
+        return Ok(true);
     };
 
     let iteration = ledger.latest_iteration() + 1;
     let run_full_tests = iteration % 5 == 0;
 
-    println!("🔄 Iteration {} - Implementing {}: {}", iteration, req.id, req.title);
+    println!(
+        "🔄 Iteration {} - Implementing {}: {}",
+        iteration, req.id, req.title
+    );
 
     if config.dry_run {
         println!("[dry-run] Would run implementation for {}", req.id);
         println!("[dry-run] Would run validation (full_tests: {run_full_tests})");
-        return Ok(());
+        return Ok(true);
     }
 
     // Mark requirement as in progress
     prd.update_requirement_status(&req.id, RequirementStatus::InProgress);
-    prd.save(&prd_path)?;
+    prd.save(prd_path)?;
 
     // Log start event
     ledger.append(LedgerEvent::new(iteration, &req.id, EventStatus::Started))?;
 
     // Generate prompt and launch Copilot
-    let prompt = generate_prompt(&prd, &req, iteration, run_full_tests);
+    let prompt = generate_prompt(prd, &req, ledger, iteration, run_full_tests);
 
     println!("📝 Launching Copilot implementer...");
-    let copilot_success = launch_copilot_implementer(&cwd, &prompt);
+    let copilot_success = launch_copilot_implementer(cwd, &prompt);
 
     // Run validation
-    let validation_passed = if let Some(ref vc) = validation_config {
+    let (validation_passed, validation_output) = if let Some(vc) = validation_config {
         if let Some(profile) = prd.validation_profiles.first().and_then(|p| vc.get(p)) {
             println!("🔍 Running validation...");
-            let results = profile.run_all(&cwd, run_full_tests);
+            let results = profile.run_all(cwd, run_full_tests);
             let all_passed = results.iter().all(|r| r.success);
+
+            // Capture output from first failed stage
+            let failed_output = results
+                .iter()
+                .find(|r| !r.success)
+                .map(|r| format!("Stage: {:?}\n\n{}", r.stage, r.output));
 
             for result in &results {
                 let icon = if result.success { "✅" } else { "❌" };
                 println!("  {} {:?}", icon, result.stage);
             }
 
-            all_passed
+            (all_passed, failed_output)
         } else {
-            true
+            (true, None)
         }
     } else {
-        true
+        (true, None)
     };
 
     // Update status based on results
@@ -126,11 +204,15 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
     };
 
     prd.update_requirement_status(&req.id, final_status);
-    prd.save(&prd_path)?;
+    prd.save(prd_path)?;
 
-    ledger.append(
-        LedgerEvent::new(iteration, &req.id, event_status).with_validation(validation_passed),
-    )?;
+    // Build ledger event with validation output if available
+    let mut event =
+        LedgerEvent::new(iteration, &req.id, event_status).with_validation(validation_passed);
+    if let Some(output) = validation_output {
+        event = event.with_validation_output(output);
+    }
+    ledger.append(event)?;
 
     if validation_passed {
         println!("✅ Iteration {iteration} complete");
@@ -138,11 +220,17 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
         println!("❌ Iteration {iteration} failed validation");
     }
 
-    Ok(())
+    Ok(validation_passed)
 }
 
-fn generate_prompt(prd: &Prd, req: &ralph_lib::Requirement, iteration: u32, run_full_tests: bool) -> String {
-    format!(
+fn generate_prompt(
+    prd: &Prd,
+    req: &ralph_lib::Requirement,
+    ledger: &Ledger,
+    iteration: u32,
+    run_full_tests: bool,
+) -> String {
+    let mut prompt = format!(
         "Implement requirement {} for feature '{}' (iteration {}).\n\n\
          Title: {}\n\n\
          Acceptance Criteria:\n{}\n\n\
@@ -158,7 +246,21 @@ fn generate_prompt(prd: &Prd, req: &ralph_lib::Requirement, iteration: u32, run_
             .collect::<Vec<_>>()
             .join("\n"),
         if run_full_tests { " -> test" } else { "" }
-    )
+    );
+
+    // Add validation failure feedback if previous iteration failed
+    if iteration > 1 {
+        if let Some(validation_output) = ledger.get_last_validation_failure(&req.id) {
+            prompt.push_str("\n\n⚠️  PREVIOUS ITERATION FAILED VALIDATION:\n\n");
+            prompt.push_str(&validation_output);
+            prompt.push_str(
+                "\n\nPlease fix the validation errors above before proceeding. \
+                 Make sure to run the appropriate commands (e.g., cargo fmt) to resolve issues.",
+            );
+        }
+    }
+
+    prompt
 }
 
 fn launch_copilot_implementer(working_dir: &Path, prompt: &str) -> bool {
