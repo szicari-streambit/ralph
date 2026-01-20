@@ -20,7 +20,7 @@
     {
       "id": "REQ-02",
       "title": "Run cargo fmt check",
-      "status": "todo",
+      "status": "in_progress",
       "acceptanceCriteria": [
         "Hook runs `cargo fmt --check`",
         "Commit is blocked if code is not formatted",
