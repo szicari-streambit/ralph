@@ -20,3 +20,4 @@
 {"timestamp":"2026-01-20T19:47:17.952848Z","iteration":12,"requirement":"REQ-02","status":"started"}
 {"timestamp":"2026-01-20T19:59:23.373874Z","iteration":13,"requirement":"REQ-02","status":"started"}
 {"timestamp":"2026-01-20T20:01:44.540Z","iteration":13,"requirement":"REQ-02","status":"in_progress","message":"Started iteration 13: enforce cargo fmt --check in pre-commit and fix formatting mismatch"}
+{"timestamp":"2026-01-20T20:02:05.439Z","iteration":13,"requirement":"REQ-02","status":"done","validation":{"fmt":"pass","lint":"pass","typecheck":"pass"},"message":"Pre-commit hook updated to run cargo fmt --check. Validation passed (fmt -> lint -> typecheck)."}
