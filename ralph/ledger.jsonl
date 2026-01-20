@@ -10,3 +10,4 @@
 2026-01-20T19:39:54.843Z	10	REQ-02	in_progress	{"message":"Updated .githooks/pre-commit to run cargo fmt --check and provide clearer error message; validation pending (fmt->lint->typecheck)"}
 2026-01-20T19:40:10.000Z	10	REQ-02	done	{"validation":{"fmt":"pass","lint":"pass","typecheck":"pass"},"message":"Pre-commit hook updated to run cargo fmt --check. Validation passed (fmt -> lint -> typecheck)."}
 2026-01-20T19:42:32.866Z	11	REQ-02	done	{"validation":{"fmt":"pass","lint":"pass","typecheck":"pass"},"message":"Ran cargo fmt across repo and updated formatting; pre-commit hook enforces formatting. Validation passed (fmt -> lint -> typecheck)."}
+{"timestamp": "2026-01-20T20:10:32.572414Z", "iteration": 16, "requirement": "REQ-05", "status": "done", "validationPassed": true, "validation": {"fmt": "pass", "lint": "pass", "typecheck": "pass"}, "message": "Added --no-verify bypass instructions to pre-commit error messages and marked PRD requirement done."}
