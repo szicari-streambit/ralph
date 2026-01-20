@@ -95,4 +95,3 @@ criterion_group!(
     bench_ledger_query
 );
 criterion_main!(benches);
-

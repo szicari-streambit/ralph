@@ -59,7 +59,12 @@ fn show_all_features(tasks_dir: &Path, verbose: bool) -> Result<()> {
                     } else {
                         "0/0".to_string()
                     };
-                    println!("  {} [{}] {}", status_icon(done, total), progress, prd.title);
+                    println!(
+                        "  {} [{}] {}",
+                        status_icon(done, total),
+                        progress,
+                        prd.title
+                    );
 
                     if verbose {
                         for req in &prd.requirements {
@@ -175,4 +180,3 @@ fn req_status_icon(status: &RequirementStatus) -> &'static str {
         RequirementStatus::Blocked => "🚫",
     }
 }
-

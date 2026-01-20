@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0",
+  "slug": "pre-commit",
+  "title": "Git Pre-commit Hook",
+  "activeRunId": "pre-commit-20260120-162154",
+  "validationProfiles": [
+    "rust-cargo"
+  ],
+  "requirements": [
+    {
+      "id": "REQ-01",
+      "title": "Create pre-commit hook script",
+      "status": "done",
+      "acceptanceCriteria": [
+        "Shell script exists at .githooks/pre-commit",
+        "Script is executable (chmod +x)",
+        "Script uses bash with strict mode (set -euo pipefail)"
+      ]
+    },
+    {
+      "id": "REQ-02",
+      "title": "Run cargo fmt check",
+      "status": "done",
+      "acceptanceCriteria": [
+        "Hook runs `cargo fmt --check`",
+        "Commit is blocked if code is not formatted",
+        "Clear error message indicates formatting failure"
+      ]
+    },
+    {
+      "id": "REQ-03",
+      "title": "Run cargo clippy",
+      "status": "done",
+      "acceptanceCriteria": [
+        "Hook runs `cargo clippy -- -D warnings`",
+        "Commit is blocked if clippy reports warnings",
+        "Clear error message indicates lint failure"
+      ]
+    },
+    {
+      "id": "REQ-04",
+      "title": "Run cargo test",
+      "status": "done",
+      "acceptanceCriteria": [
+        "Hook runs `cargo test`",
+        "Commit is blocked if any test fails",
+        "Clear error message indicates test failure"
+      ]
+    },
+    {
+      "id": "REQ-05",
+      "title": "Support bypass for emergencies",
+      "status": "done",
+      "acceptanceCriteria": [
+        "Error messages include instructions for --no-verify bypass",
+        "git commit --no-verify skips all checks"
+      ]
+    }
+  ]
+}

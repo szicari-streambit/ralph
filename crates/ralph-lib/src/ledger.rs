@@ -33,6 +33,9 @@ pub struct LedgerEvent {
     /// Whether validation passed (if applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validation_passed: Option<bool>,
+    /// Validation output (error messages from failed validation stages)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validation_output: Option<String>,
     /// Optional message or details
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
@@ -48,6 +51,7 @@ impl LedgerEvent {
             requirement: requirement.into(),
             status,
             validation_passed: None,
+            validation_output: None,
             message: None,
         }
     }
@@ -56,6 +60,13 @@ impl LedgerEvent {
     #[must_use]
     pub fn with_validation(mut self, passed: bool) -> Self {
         self.validation_passed = Some(passed);
+        self
+    }
+
+    /// Set validation output (error messages from failed validation)
+    #[must_use]
+    pub fn with_validation_output(mut self, output: impl Into<String>) -> Self {
+        self.validation_output = Some(output.into());
         self
     }
 
@@ -126,10 +137,7 @@ impl Ledger {
             std::fs::create_dir_all(parent)?;
         }
         // Create empty file if it doesn't exist
-        OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)?;
+        OpenOptions::new().create(true).append(true).open(path)?;
 
         Ok(Self {
             path: Some(path.to_path_buf()),
@@ -186,6 +194,18 @@ impl Ledger {
             .is_some_and(|e| e.status == EventStatus::Failed)
     }
 
+    /// Get validation output from the most recent failed iteration for a requirement
+    ///
+    /// Returns the validation output if the most recent iteration failed validation
+    #[must_use]
+    pub fn get_last_validation_failure(&self, req_id: &str) -> Option<String> {
+        self.events_for_requirement(req_id)
+            .iter()
+            .rev()
+            .find(|e| e.validation_passed == Some(false))
+            .and_then(|e| e.validation_output.clone())
+    }
+
     /// Get the count of iterations where full tests were run
     #[must_use]
     pub fn full_test_count(&self) -> usize {
@@ -227,7 +247,16 @@ impl Ledger {
             );
             record.put(
                 "validationPassed",
-                event.validation_passed.map(apache_avro::types::Value::Boolean),
+                event
+                    .validation_passed
+                    .map(apache_avro::types::Value::Boolean),
+            );
+            record.put(
+                "validationOutput",
+                event
+                    .validation_output
+                    .clone()
+                    .map(apache_avro::types::Value::String),
             );
             record.put(
                 "message",
@@ -267,6 +296,7 @@ pub const LEDGER_AVRO_SCHEMA: &str = r#"{
         {"name": "requirement", "type": "string"},
         {"name": "status", "type": {"type": "enum", "name": "EventStatus", "symbols": ["started", "in_progress", "done", "failed"]}},
         {"name": "validationPassed", "type": ["null", "boolean"], "default": null},
+        {"name": "validationOutput", "type": ["null", "string"], "default": null},
         {"name": "message", "type": ["null", "string"], "default": null}
     ]
 }"#;
@@ -424,10 +454,9 @@ mod proptests {
     }
 
     fn arb_ledger_event() -> impl Strategy<Value = LedgerEvent> {
-        (1u32..100, "REQ-[0-9]{2}", arb_event_status())
-            .prop_map(|(iteration, requirement, status)| {
-                LedgerEvent::new(iteration, &requirement, status)
-            })
+        (1u32..100, "REQ-[0-9]{2}", arb_event_status()).prop_map(
+            |(iteration, requirement, status)| LedgerEvent::new(iteration, &requirement, status),
+        )
     }
 
     proptest! {

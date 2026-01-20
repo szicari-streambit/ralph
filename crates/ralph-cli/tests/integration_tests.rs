@@ -178,4 +178,3 @@ fn test_hook_commit_msg_invalid() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("must reference a requirement"));
 }
-

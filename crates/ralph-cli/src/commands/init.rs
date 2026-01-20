@@ -20,12 +20,7 @@ pub fn run(config: &InitConfig) -> Result<()> {
     }
 
     // Create directory structure
-    let dirs = [
-        "ralph/tasks",
-        "docs/ralph",
-        ".github/agents",
-        ".githooks",
-    ];
+    let dirs = ["ralph/tasks", "docs/ralph", ".github/agents", ".githooks"];
 
     for dir in &dirs {
         let path = cwd.join(dir);
@@ -64,7 +59,12 @@ pub fn run(config: &InitConfig) -> Result<()> {
     // Create validation.json if it doesn't exist
     let validation_path = cwd.join("ralph/validation.json");
     if !validation_path.exists() || config.dry_run {
-        create_template_file(&cwd, "ralph/validation.json", VALIDATION_JSON_TEMPLATE, config)?;
+        create_template_file(
+            &cwd,
+            "ralph/validation.json",
+            VALIDATION_JSON_TEMPLATE,
+            config,
+        )?;
     }
 
     // Set commit-msg hook as executable
@@ -128,11 +128,16 @@ Planning is re-entrant: append to Planning Log, rewrite managed blocks. Planning
 
 const RALPH_IMPLEMENTER_TEMPLATE: &str = r#"---
 name: ralph-implementer
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "search", "edit", "execute"]
 ---
+
+CRITICAL: You MUST ensure your code passes validation BEFORE finishing each iteration.
+
+The outer loop will run validation checks (fmt, lint, typecheck, test) on your work.
+If validation fails, you will waste iterations. Read error messages carefully and fix them.
+
 Implement one requirement per iteration. Update PRD status only after validation passes.
-Append one ledger event per iteration. Run fmt -> lint -> typecheck (short-circuit on failure).
-Full test sweep every 5th iteration.
+Append one ledger event per iteration. Full test sweep every 5th iteration.
 "#;
 
 const COMMIT_MSG_HOOK_TEMPLATE: &str = r#"#!/usr/bin/env bash
@@ -155,4 +160,3 @@ const VALIDATION_JSON_TEMPLATE: &str = r#"{
   }
 }
 "#;
-
