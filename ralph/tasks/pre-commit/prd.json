@@ -25,18 +25,12 @@
         "Hook runs `cargo fmt --check`",
         "Commit is blocked if code is not formatted",
         "Clear error message indicates formatting failure"
-      ],
-      "notes": [
-        {
-          "timestamp": "2026-01-20T20:01:59.256789Z",
-          "message": "Validated: fmt->lint->typecheck passed"
-        }
       ]
     },
     {
       "id": "REQ-03",
       "title": "Run cargo clippy",
-      "status": "todo",
+      "status": "done",
       "acceptanceCriteria": [
         "Hook runs `cargo clippy -- -D warnings`",
         "Commit is blocked if clippy reports warnings",
@@ -46,7 +40,7 @@
     {
       "id": "REQ-04",
       "title": "Run cargo test",
-      "status": "todo",
+      "status": "done",
       "acceptanceCriteria": [
         "Hook runs `cargo test`",
         "Commit is blocked if any test fails",
@@ -56,7 +50,7 @@
     {
       "id": "REQ-05",
       "title": "Support bypass for emergencies",
-      "status": "todo",
+      "status": "done",
       "acceptanceCriteria": [
         "Error messages include instructions for --no-verify bypass",
         "git commit --no-verify skips all checks"

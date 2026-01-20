@@ -14,18 +14,28 @@ fi
 
 if ! cargo fmt --check; then
   echo "Formatting check failed: code is not formatted. Run 'cargo fmt --all' to format the code. Commit aborted." >&2
+  echo "To bypass for emergencies, run: git commit --no-verify" >&2
   exit 1
 fi
 
 # Run lint
 if ! cargo clippy --all-targets --all-features -- -D warnings; then
-  echo "lint failed" >&2
+  echo "Lint failed: clippy reported warnings or errors. Commit aborted." >&2
+  echo "To bypass for emergencies, run: git commit --no-verify" >&2
   exit 1
 fi
 
 # Run typecheck
 if ! cargo check --all-targets --all-features; then
-  echo "typecheck failed" >&2
+  echo "Typecheck failed: cargo check reported errors. Commit aborted." >&2
+  echo "To bypass for emergencies, run: git commit --no-verify" >&2
+  exit 1
+fi
+
+# Run tests
+if ! cargo test --all-features; then
+  echo "Tests failed: some tests did not pass. Run 'cargo test' locally to view failures. Commit aborted." >&2
+  echo "To bypass for emergencies, run: git commit --no-verify" >&2
   exit 1
 fi
 
