@@ -20,11 +20,17 @@
     {
       "id": "REQ-02",
       "title": "Run cargo fmt check",
-      "status": "in_progress",
+      "status": "done",
       "acceptanceCriteria": [
         "Hook runs `cargo fmt --check`",
         "Commit is blocked if code is not formatted",
         "Clear error message indicates formatting failure"
+      ],
+      "notes": [
+        {
+          "timestamp": "2026-01-20T20:01:59.256789Z",
+          "message": "Validated: fmt->lint->typecheck passed"
+        }
       ]
     },
     {
