@@ -38,4 +38,3 @@ pub enum RalphError {
     #[error("Copilot error: {0}")]
     Copilot(String),
 }
-

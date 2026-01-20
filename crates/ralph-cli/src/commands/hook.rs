@@ -23,7 +23,10 @@ pub fn commit_msg(config: &CommitMsgConfig) -> Result<()> {
     // Check for requirement reference pattern
     let req_pattern = regex_lite::Regex::new(r"REQ-\d+").expect("valid regex");
 
-    let refs: Vec<&str> = req_pattern.find_iter(&message).map(|m| m.as_str()).collect();
+    let refs: Vec<&str> = req_pattern
+        .find_iter(&message)
+        .map(|m| m.as_str())
+        .collect();
 
     if refs.is_empty() {
         eprintln!("❌ Commit message must reference a requirement (e.g., REQ-01)");
@@ -82,8 +85,8 @@ fn collect_all_requirement_ids(tasks_dir: &Path) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_commit_msg_with_valid_ref() {
@@ -100,4 +103,3 @@ mod tests {
         let _ = config; // Just verify it compiles
     }
 }
-

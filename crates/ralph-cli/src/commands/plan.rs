@@ -78,11 +78,7 @@ pub fn run(config: &PlanConfig) -> Result<()> {
 }
 
 fn create_initial_prd(slug: &str) -> Prd {
-    let run_id = format!(
-        "{}-{}",
-        slug,
-        chrono::Utc::now().format("%Y%m%d-%H%M%S")
-    );
+    let run_id = format!("{}-{}", slug, chrono::Utc::now().format("%Y%m%d-%H%M%S"));
 
     Prd {
         schema_version: "1.0".to_string(),
@@ -164,4 +160,3 @@ fn launch_copilot_planner(
 
     Ok(())
 }
-

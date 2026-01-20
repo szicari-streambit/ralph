@@ -20,12 +20,7 @@ pub fn run(config: &InitConfig) -> Result<()> {
     }
 
     // Create directory structure
-    let dirs = [
-        "ralph/tasks",
-        "docs/ralph",
-        ".github/agents",
-        ".githooks",
-    ];
+    let dirs = ["ralph/tasks", "docs/ralph", ".github/agents", ".githooks"];
 
     for dir in &dirs {
         let path = cwd.join(dir);
@@ -64,7 +59,12 @@ pub fn run(config: &InitConfig) -> Result<()> {
     // Create validation.json if it doesn't exist
     let validation_path = cwd.join("ralph/validation.json");
     if !validation_path.exists() || config.dry_run {
-        create_template_file(&cwd, "ralph/validation.json", VALIDATION_JSON_TEMPLATE, config)?;
+        create_template_file(
+            &cwd,
+            "ralph/validation.json",
+            VALIDATION_JSON_TEMPLATE,
+            config,
+        )?;
     }
 
     // Set commit-msg hook as executable
@@ -155,4 +155,3 @@ const VALIDATION_JSON_TEMPLATE: &str = r#"{
   }
 }
 "#;
-
