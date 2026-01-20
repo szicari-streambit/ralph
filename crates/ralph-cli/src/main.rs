@@ -41,6 +41,12 @@ enum Commands {
         /// Preview actions without executing
         #[arg(long)]
         dry_run: bool,
+        /// Run only one iteration instead of looping until success
+        #[arg(long)]
+        once: bool,
+        /// Maximum number of iterations (default: 10)
+        #[arg(long, default_value = "10")]
+        max_iterations: u32,
     },
     /// Show status of PRD requirements and ledger
     Status {
@@ -76,13 +82,18 @@ fn main() {
             dry_run,
             verbose: cli.verbose,
         }),
-        Commands::Implement { slug, dry_run } => {
-            commands::implement::run(&commands::implement::ImplementConfig {
-                slug,
-                dry_run,
-                verbose: cli.verbose,
-            })
-        }
+        Commands::Implement {
+            slug,
+            dry_run,
+            once,
+            max_iterations,
+        } => commands::implement::run(&commands::implement::ImplementConfig {
+            slug,
+            dry_run,
+            verbose: cli.verbose,
+            loop_enabled: !once,
+            max_iterations,
+        }),
         Commands::Status { slug } => commands::status::run(&commands::status::StatusConfig {
             slug,
             verbose: cli.verbose,
