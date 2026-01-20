@@ -59,6 +59,15 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
         None
     };
 
+    // Count requirements by status
+    let total_reqs = prd.requirements.len();
+    let done_reqs = prd
+        .requirements
+        .iter()
+        .filter(|r| r.status == RequirementStatus::Done)
+        .count();
+    let remaining_reqs = total_reqs - done_reqs;
+
     if config.verbose {
         println!("Implementing feature: {}", config.slug);
         println!("PRD: {}", prd_path.display());
@@ -66,8 +75,19 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
         println!("Current iteration: {}", ledger.latest_iteration() + 1);
     }
 
+    println!(
+        "📊 Progress: {}/{} requirements complete ({} remaining)",
+        done_reqs, total_reqs, remaining_reqs
+    );
+
     if config.loop_enabled {
-        // Autonomous loop mode - iterate until success or max iterations
+        println!(
+            "🔄 Starting implementation loop (max {} iterations)",
+            config.max_iterations
+        );
+        println!();
+
+        // Autonomous loop mode - iterate through requirements until all done or max iterations
         let mut iteration_count = 0;
         loop {
             iteration_count += 1;
@@ -78,11 +98,19 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
                     "⛔ Max iterations ({}) reached - stopping",
                     config.max_iterations
                 );
+                let remaining = prd
+                    .requirements
+                    .iter()
+                    .filter(|r| r.status != RequirementStatus::Done)
+                    .count();
+                if remaining > 0 {
+                    println!("   {} requirements still incomplete", remaining);
+                }
                 break;
             }
 
             // Run one iteration
-            let validation_passed = run_single_iteration(
+            let all_done = run_single_iteration(
                 config,
                 &cwd,
                 &prd_path,
@@ -91,19 +119,14 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
                 validation_config.as_ref(),
             )?;
 
-            if validation_passed {
-                println!("✅ Task complete!");
+            // If all requirements are complete, we're done
+            if all_done {
+                println!("✅ All requirements complete!");
                 break;
             }
 
-            // Validation failed - loop will retry automatically
-            if iteration_count < config.max_iterations {
-                println!(
-                    "🔄 Validation failed, retrying (attempt {}/{})",
-                    iteration_count + 1,
-                    config.max_iterations
-                );
-            }
+            // Continue to next requirement
+            println!();
         }
     } else {
         // Single iteration mode (--once flag)
@@ -122,7 +145,7 @@ pub fn run(config: &ImplementConfig) -> Result<()> {
 
 /// Run a single iteration of the implementation loop
 ///
-/// Returns Ok(true) if validation passed, Ok(false) if validation failed
+/// Returns Ok(true) if all requirements are complete, Ok(false) if there's more work to do
 fn run_single_iteration(
     config: &ImplementConfig,
     cwd: &Path,
@@ -139,7 +162,7 @@ fn run_single_iteration(
         .cloned();
 
     let Some(req) = next_req else {
-        println!("✅ All requirements are complete!");
+        // No more requirements to implement
         return Ok(true);
     };
 
@@ -154,7 +177,8 @@ fn run_single_iteration(
     if config.dry_run {
         println!("[dry-run] Would run implementation for {}", req.id);
         println!("[dry-run] Would run validation (full_tests: {run_full_tests})");
-        return Ok(true);
+        // In dry-run, simulate success but indicate more work remains
+        return Ok(false);
     }
 
     // Mark requirement as in progress
@@ -220,7 +244,8 @@ fn run_single_iteration(
         println!("❌ Iteration {iteration} failed validation");
     }
 
-    Ok(validation_passed)
+    // Return false to indicate there may be more requirements to process
+    Ok(false)
 }
 
 fn generate_prompt(
