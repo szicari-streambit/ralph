@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook to enforce project validation: fmt, lint, typecheck
+# It runs cargo fmt --all -- --check, cargo clippy -- -D warnings, and cargo check
+
+echo "Running pre-commit checks: fmt -> lint -> typecheck"
+
+# Run fmt
+if ! command -v cargo >/dev/null 2>&1 || ! cargo fmt --all -- --check; then
+  echo "fmt failed or cargo not available" >&2
+  exit 1
+fi
+
+# Run lint
+if ! command -v cargo >/dev/null 2>&1 || ! cargo clippy --all-targets --all-features -- -D warnings; then
+  echo "lint failed or cargo not available" >&2
+  exit 1
+fi
+
+# Run typecheck
+if ! command -v cargo >/dev/null 2>&1 || ! cargo check --all-targets --all-features; then
+  echo "typecheck failed or cargo not available" >&2
+  exit 1
+fi
+
+exit 0
