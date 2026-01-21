@@ -37,7 +37,7 @@
         # Binary package
         packages.default = naersk'.buildPackage {
           src = ./.;
-          nativeBuildInputs = with pkgs; [ pkg-config ];
+          nativeBuildInputs = with pkgs; [ pkg-config makeWrapper ];
           buildInputs = with pkgs; [ openssl ];
 
           # Ensure agent templates are bundled into the package output
