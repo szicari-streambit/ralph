@@ -88,12 +88,29 @@ pub fn run(config: &InitConfig) -> Result<()> {
     // otherwise fall back to embedded templates.
     let share_dir = std::env::var("RALPH_SHARE_DIR").ok();
 
-    // Helper to try reading a file from share_dir and write it; returns Ok(true) if used
+    /// Helper function to try reading a file from share_dir and write it to destination.
+    ///
+    /// # Parameters
+    /// - `share_dir`: The shared directory path containing templates
+    /// - `rel`: Relative path within templates directory (e.g., ".github/agents/ralph-planner.agent.md")
+    /// - `dest`: Destination path where the file should be written
+    /// - `verbose`: Whether to print verbose output
+    /// - `dry_run`: Whether to perform a dry run (only print what would be done)
+    ///
+    /// # Returns
+    /// - `Ok(true)` if the shared template was found and used (or would be used in dry-run)
+    /// - `Ok(false)` if the shared template was not found
+    /// - `Err(...)` if an I/O error occurred
+    ///
+    /// # Side Effects
+    /// - Creates parent directories and writes the file to `dest` (unless dry-run or file exists)
+    /// - Skips existing files without overwriting
     fn try_use_shared(
         share_dir: &str,
         rel: &str,
         dest: &std::path::Path,
         verbose: bool,
+        dry_run: bool,
     ) -> Result<bool> {
         let shared_path = std::path::Path::new(share_dir).join("templates").join(rel);
         if shared_path.exists() {
@@ -107,6 +124,12 @@ pub fn run(config: &InitConfig) -> Result<()> {
             if verbose {
                 println!("Using shared template: {}", shared_path.display());
             }
+
+            if dry_run {
+                println!("Would copy {} to {}", shared_path.display(), dest.display());
+                return Ok(true);
+            }
+
             let content = std::fs::read_to_string(&shared_path)?;
             if let Some(parent) = dest.parent() {
                 std::fs::create_dir_all(parent)?;
@@ -127,15 +150,28 @@ pub fn run(config: &InitConfig) -> Result<()> {
             ".github/agents/ralph-planner.agent.md",
             &planner_dest,
             config.verbose,
+            config.dry_run,
         )?;
         let implementer_ok = try_use_shared(
             sd,
             ".github/agents/ralph-implementer.agent.md",
             &implementer_dest,
             config.verbose,
+            config.dry_run,
         )?;
         if !planner_ok || !implementer_ok {
-            return Err(ralph_lib::RalphError::Command(format!("RALPH_SHARE_DIR is set to '{}' but agent files not found in templates/.github/agents/", sd)));
+            let mut missing = Vec::new();
+            if !planner_ok {
+                missing.push("planner agent (.github/agents/ralph-planner.agent.md)");
+            }
+            if !implementer_ok {
+                missing.push("implementer agent (.github/agents/ralph-implementer.agent.md)");
+            }
+            return Err(ralph_lib::RalphError::Command(format!(
+                "RALPH_SHARE_DIR is set to '{}' but the following agent file(s) were not found under templates/.github/agents/: {}",
+                sd,
+                missing.join(", ")
+            )));
         }
     } else {
         // use embedded templates

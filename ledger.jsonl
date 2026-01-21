@@ -3,7 +3,6 @@
 {"timestamp":"2026-01-21T16:43:26.080Z","iteration":2,"requirement_id":"REQ-02","status":"in_progress","validation_result":"fmt,lint,typecheck pending","message":"Started wrapping ralph binary in flake.nix"}
 {"timestamp":"2026-01-21T16:43:33.135Z","iteration":2,"requirement_id":"REQ-02","status":"done","validation_result":"fmt,lint,typecheck passed","message":"Wrapped ralph with RALPH_SHARE_DIR in flake.nix"}
 {"timestamp":"2026-01-21T16:46:30.013737Z","iteration":3,"requirement_id":"REQ-03","status":"done","validation_result":"fmt,lint,typecheck passed","message":"Init reads templates from RALPH_SHARE_DIR when set; embedded fallback used when unset; error on missing files in share dir"}
-
 {"timestamp": "2026-01-21T16:48:31Z", "iteration": 4, "requirement_id": "REQ-04", "status": "done", "validation_result": "fmt,lint,typecheck passed", "message": "Init detects git root and copies agent files to git root/.github/agents; errors if not in a git repo"}
 {"timestamp":"2026-01-21T16:52:36.129Z","iteration":6,"requirement_id":"REQ-05","status":"done","validation_result":"fmt,lint,typecheck passed","message":"Skipped existing agent files without error; verbose mode may indicate skipped files"}
 {"timestamp": "2026-01-21T16:59:09.143978Z", "iteration": 7, "requirement_id": "REQ-06", "status": "done", "validation_result": "fmt,lint,typecheck passed", "message": "Printed success message after init; idempotent when files skipped"}

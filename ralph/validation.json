@@ -1,13 +1,13 @@
 {
   "schemaVersion": "1.0",
   "profiles": {
-    "default": {
-      "detect": { "anyFilesExist": [] },
+    "rust-cargo": {
+      "detect": { "anyFilesExist": ["Cargo.toml"] },
       "commands": {
-        "fmt": [],
-        "lint": [],
-        "typecheck": [],
-        "test": []
+        "fmt": ["cargo", "fmt", "--check"],
+        "lint": ["cargo", "clippy", "--", "-D", "warnings"],
+        "typecheck": ["cargo", "check"],
+        "test": ["cargo", "test"]
       }
     }
   }
