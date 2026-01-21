@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0",
+  "slug": "stateless-execution",
+  "title": "Stateless Execution - Install Ralph Anywhere",
+  "activeRunId": "stateless-execution-20260121-163200",
+  "validationProfiles": [
+    "nix-flake"
+  ],
+  "requirements": [
+    {
+      "id": "REQ-01",
+      "title": "Bundle agent templates in Nix package",
+      "status": "done",
+      "acceptanceCriteria": [
+        "flake.nix copies templates/.github/agents/ to $out/share/ralph/templates/.github/agents/",
+        "nix build completes successfully without errors",
+        "Built package contains share/ralph/templates/.github/agents/ralph-planner.agent.md",
+        "Built package contains share/ralph/templates/.github/agents/ralph-implementer.agent.md"
+      ]
+    },
+    {
+      "id": "REQ-02",
+      "title": "Wrap binary with RALPH_SHARE_DIR environment variable",
+      "status": "done",
+      "acceptanceCriteria": [
+        "flake.nix uses makeWrapper to wrap the ralph binary",
+        "Wrapped binary has RALPH_SHARE_DIR set to $out/share/ralph",
+        "Running 'ralph' from Nix package has RALPH_SHARE_DIR in environment"
+      ]
+    },
+    {
+      "id": "REQ-03",
+      "title": "Init reads templates from RALPH_SHARE_DIR when set",
+      "status": "done",
+      "acceptanceCriteria": [
+        "When RALPH_SHARE_DIR is set, init reads agent files from $RALPH_SHARE_DIR/templates/.github/agents/",
+        "When RALPH_SHARE_DIR is not set, init uses embedded template strings (dev fallback)",
+        "Error message if RALPH_SHARE_DIR is set but agent files are missing",
+        "Embedded fallback templates include full feedback loop content from authoritative templates"
+      ]
+    },
+    {
+      "id": "REQ-04",
+      "title": "Init copies agents to git repository root",
+      "status": "done",
+      "acceptanceCriteria": [
+        "ralph init detects git root (via git rev-parse or .git directory walk)",
+        "Agent files are copied to <git-root>/.github/agents/",
+        "ralph init fails with clear error if not run inside a git repository",
+        "ralph init continues to create standard boilerplate (ralph/tasks, docs/ralph, .githooks, validation.json, commit-msg hook)"
+      ]
+    },
+    {
+      "id": "REQ-05",
+      "title": "Skip existing agent files without error",
+      "status": "done",
+      "acceptanceCriteria": [
+        "If ralph-planner.agent.md exists at destination, it is not overwritten",
+        "If ralph-implementer.agent.md exists at destination, it is not overwritten",
+        "No error or warning is printed for skipped files",
+        "Verbose mode may indicate files were skipped"
+      ]
+    },
+    {
+      "id": "REQ-06",
+      "title": "Success output message",
+      "status": "done",
+      "acceptanceCriteria": [
+        "On successful init, prints 'Planner and Implementer agents installed'",
+        "Message is printed even if some files were skipped (idempotent success)"
+      ]
+    },
+    {
+      "id": "REQ-07",
+      "title": "End-to-end validation: build and init in fresh repo",
+      "status": "done",
+      "acceptanceCriteria": [
+        "nix build .# completes successfully",
+        "ralph init succeeds when run in a fresh git repository",
+        "Initialized repo contains no hard-coded Rust-specific instructions (e.g., 'cargo fmt', 'cargo clippy' in agent files)",
+        "Agent templates in initialized repo are language-agnostic, referring to validation profiles rather than specific toolchains"
+      ]
+    }
+  ]
+}
