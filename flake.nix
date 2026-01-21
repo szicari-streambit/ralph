@@ -39,6 +39,17 @@
           src = ./.;
           nativeBuildInputs = with pkgs; [ pkg-config ];
           buildInputs = with pkgs; [ openssl ];
+
+          # Ensure agent templates are bundled into the package output
+          postInstall = ''
+            mkdir -p "$out/share/ralph/templates/.github"
+            if [ -d templates/.github/agents ]; then
+              cp -R templates/.github/agents "$out/share/ralph/templates/.github/"
+            fi
+
+            # Wrap the ralph binary so RALPH_SHARE_DIR is set to $out/share/ralph
+            wrapProgram "$out/bin/ralph" --set RALPH_SHARE_DIR "$out/share/ralph"
+          '';
         };
 
         # Development shell
