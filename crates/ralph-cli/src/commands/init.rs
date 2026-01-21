@@ -4,6 +4,7 @@
 use ralph_lib::Result;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 /// Configuration for init command
 pub struct InitConfig {
@@ -19,8 +20,57 @@ pub fn run(config: &InitConfig) -> Result<()> {
         println!("Initializing Ralph project in {}", cwd.display());
     }
 
-    // Create directory structure
-    let dirs = ["ralph/tasks", "docs/ralph", ".github/agents", ".githooks"];
+    // Detect git root for placing agent files and create directory structure for project
+    // Determine git root: prefer `git rev-parse --show-toplevel`, fall back to searching parents for .git
+    let git_root = match Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            std::path::PathBuf::from(path)
+        }
+        _ => {
+            // Walk parents looking for .git directory
+            let mut dir = cwd.clone();
+            let mut found = None;
+            loop {
+                if dir.join(".git").exists() {
+                    found = Some(dir.clone());
+                    break;
+                }
+                if !dir.pop() {
+                    break;
+                }
+            }
+            if let Some(p) = found {
+                p
+            } else {
+                // Not inside a git repo — initialize one in the current directory (unless dry-run)
+                if !config.dry_run {
+                    let init = Command::new("git").arg("init").current_dir(&cwd).output()?;
+                    if !init.status.success() {
+                        return Err(ralph_lib::RalphError::Command(format!(
+                            "Failed to initialize git repository: {}",
+                            String::from_utf8_lossy(&init.stderr)
+                        )));
+                    }
+                } else if config.verbose {
+                    println!(
+                        "(dry-run) Would initialize a new git repository in {}",
+                        cwd.display()
+                    );
+                }
+                cwd.clone()
+            }
+        }
+    };
+
+    if config.verbose {
+        println!("Detected git root: {}", git_root.display());
+    }
+
+    let dirs = ["ralph/tasks", "docs/ralph", ".githooks"];
 
     for dir in &dirs {
         let path = cwd.join(dir);
@@ -34,20 +84,110 @@ pub fn run(config: &InitConfig) -> Result<()> {
         }
     }
 
-    // Create template files
-    create_template_file(
-        &cwd,
-        ".github/agents/ralph-planner.agent.md",
-        RALPH_PLANNER_TEMPLATE,
-        config,
-    )?;
+    // Create template files. If RALPH_SHARE_DIR is set, prefer files from $RALPH_SHARE_DIR/templates/.github/agents/)
+    // otherwise fall back to embedded templates.
+    let share_dir = std::env::var("RALPH_SHARE_DIR").ok();
 
-    create_template_file(
-        &cwd,
-        ".github/agents/ralph-implementer.agent.md",
-        RALPH_IMPLEMENTER_TEMPLATE,
-        config,
-    )?;
+    /// Helper function to try reading a file from share_dir and write it to destination.
+    ///
+    /// # Parameters
+    /// - `share_dir`: The shared directory path containing templates
+    /// - `rel`: Relative path within templates directory (e.g., ".github/agents/ralph-planner.agent.md")
+    /// - `dest`: Destination path where the file should be written
+    /// - `verbose`: Whether to print verbose output
+    /// - `dry_run`: Whether to perform a dry run (only print what would be done)
+    ///
+    /// # Returns
+    /// - `Ok(true)` if the shared template was found and used (or would be used in dry-run)
+    /// - `Ok(false)` if the shared template was not found
+    /// - `Err(...)` if an I/O error occurred
+    ///
+    /// # Side Effects
+    /// - Creates parent directories and writes the file to `dest` (unless dry-run or file exists)
+    /// - Skips existing files without overwriting
+    fn try_use_shared(
+        share_dir: &str,
+        rel: &str,
+        dest: &std::path::Path,
+        verbose: bool,
+        dry_run: bool,
+    ) -> Result<bool> {
+        let shared_path = std::path::Path::new(share_dir).join("templates").join(rel);
+        if shared_path.exists() {
+            // If destination already exists, do not overwrite. In verbose mode indicate skip.
+            if dest.exists() {
+                if verbose {
+                    println!("Skipped existing file: {}", dest.display());
+                }
+                return Ok(true);
+            }
+            if verbose {
+                println!("Using shared template: {}", shared_path.display());
+            }
+
+            if dry_run {
+                println!("Would copy {} to {}", shared_path.display(), dest.display());
+                return Ok(true);
+            }
+
+            let content = std::fs::read_to_string(&shared_path)?;
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(dest, content)?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    let planner_dest = git_root.join(".github/agents/ralph-planner.agent.md");
+    let implementer_dest = git_root.join(".github/agents/ralph-implementer.agent.md");
+
+    if let Some(ref sd) = share_dir {
+        // Try to copy both agent files from shared dir. If any missing, return error.
+        let planner_ok = try_use_shared(
+            sd,
+            ".github/agents/ralph-planner.agent.md",
+            &planner_dest,
+            config.verbose,
+            config.dry_run,
+        )?;
+        let implementer_ok = try_use_shared(
+            sd,
+            ".github/agents/ralph-implementer.agent.md",
+            &implementer_dest,
+            config.verbose,
+            config.dry_run,
+        )?;
+        if !planner_ok || !implementer_ok {
+            let mut missing = Vec::new();
+            if !planner_ok {
+                missing.push("planner agent (.github/agents/ralph-planner.agent.md)");
+            }
+            if !implementer_ok {
+                missing.push("implementer agent (.github/agents/ralph-implementer.agent.md)");
+            }
+            return Err(ralph_lib::RalphError::Command(format!(
+                "RALPH_SHARE_DIR is set to '{}' but the following agent file(s) were not found under templates/.github/agents/: {}",
+                sd,
+                missing.join(", ")
+            )));
+        }
+    } else {
+        // use embedded templates
+        create_template_file(
+            &git_root,
+            ".github/agents/ralph-planner.agent.md",
+            RALPH_PLANNER_TEMPLATE,
+            config,
+        )?;
+        create_template_file(
+            &git_root,
+            ".github/agents/ralph-implementer.agent.md",
+            RALPH_IMPLEMENTER_TEMPLATE,
+            config,
+        )?;
+    }
 
     create_template_file(
         &cwd,
@@ -83,6 +223,7 @@ pub fn run(config: &InitConfig) -> Result<()> {
 
     if !config.dry_run {
         println!("✅ Ralph project initialized successfully!");
+        println!("Planner and Implementer agents installed");
         println!();
         println!("Next steps:");
         println!("  1. Run: git config core.hooksPath .githooks");
@@ -109,6 +250,14 @@ fn create_template_file(
         fs::create_dir_all(parent)?;
     }
 
+    // If file already exists, do not overwrite. In verbose mode indicate it was skipped.
+    if path.exists() {
+        if config.verbose {
+            println!("Skipped existing file: {}", path.display());
+        }
+        return Ok(());
+    }
+
     fs::write(&path, content)?;
 
     if config.verbose {
@@ -131,10 +280,10 @@ name: ralph-implementer
 tools: ["read", "search", "edit", "execute"]
 ---
 
-CRITICAL: You MUST ensure your code passes validation BEFORE finishing each iteration.
+CRITICAL: You MUST ensure your work passes the repository's validation profiles BEFORE finishing each iteration.
 
-The outer loop will run validation checks (fmt, lint, typecheck, test) on your work.
-If validation fails, you will waste iterations. Read error messages carefully and fix them.
+The outer loop will run validation checks as defined in ralph/validation.json (profiles: fmt, lint, typecheck, test).
+If validation fails, read the validation output carefully, fix root causes, and re-run the validation commands specified by the active profile.
 
 Implement one requirement per iteration. Update PRD status only after validation passes.
 Append one ledger event per iteration. Full test sweep every 5th iteration.
@@ -148,13 +297,13 @@ exec ralph hook commit-msg "$1"
 const VALIDATION_JSON_TEMPLATE: &str = r#"{
   "schemaVersion": "1.0",
   "profiles": {
-    "rust-cargo": {
-      "detect": { "anyFilesExist": ["Cargo.toml"] },
+    "default": {
+      "detect": { "anyFilesExist": [] },
       "commands": {
-        "fmt": ["cargo fmt --all -- --check"],
-        "lint": ["cargo clippy --all-targets --all-features -- -D warnings"],
-        "typecheck": ["cargo check --all-targets --all-features"],
-        "test": ["cargo test --all-features"]
+        "fmt": [],
+        "lint": [],
+        "typecheck": [],
+        "test": []
       }
     }
   }
