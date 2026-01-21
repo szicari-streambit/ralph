@@ -234,10 +234,10 @@ mod tests {
                 "rust-cargo": {
                     "detect": { "anyFilesExist": ["Cargo.toml"] },
                     "commands": {
-                        "fmt": ["cargo fmt --all -- --check"],
-                        "lint": ["cargo clippy -- -D warnings"],
-                        "typecheck": ["cargo check"],
-                        "test": ["cargo test"]
+                        "fmt": [],
+                        "lint": [],
+                        "typecheck": [],
+                        "test": []
                     }
                 },
                 "node-npm": {
