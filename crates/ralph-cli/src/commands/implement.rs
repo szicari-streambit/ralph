@@ -409,7 +409,7 @@ fn launch_copilot_implementer(working_dir: &Path, prompt: &str, verbose: bool) -
         prompt,
         "--agent=ralph-implementer",
         "--model",
-        "gpt-5-mini",
+        "claude-haiku-4.5",
         "--allow-all-tools",
         "--allow-all-paths",
     ];
