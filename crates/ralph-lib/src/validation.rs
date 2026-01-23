@@ -167,7 +167,7 @@ impl ValidationProfile {
 
 /// Run a shell command in the given directory
 fn run_shell_command(cmd: &str, cwd: &Path) -> std::io::Result<Output> {
-    Command::new("sh")
+    Command::new("bash")
         .arg("-c")
         .arg(cmd)
         .current_dir(cwd)
