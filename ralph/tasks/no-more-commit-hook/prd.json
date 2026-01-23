@@ -10,7 +10,7 @@
     {
       "id": "REQ-01",
       "title": "Remove pre-commit hook script",
-      "status": "in_progress",
+      "status": "done",
       "acceptanceCriteria": [
         "File .githooks/pre-commit no longer exists",
         "git commit succeeds without running validation checks"
