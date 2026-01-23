@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0",
+  "slug": "no-rust",
+  "title": "no rust",
+  "activeRunId": "no-rust-20260123-205813",
+  "validationProfiles": [
+    "rust-cargo"
+  ],
+  "requirements": [
+    {
+      "id": "REQ-01",
+      "title": "Initial requirement",
+      "status": "todo",
+      "acceptanceCriteria": [
+        "Define acceptance criteria during planning"
+      ]
+    }
+  ]
+}
