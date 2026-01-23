@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0",
+  "slug": "no-more-commit-hook",
+  "title": "Remove mandatory git hooks, add opt-in pre-commit framework",
+  "activeRunId": "no-more-commit-hook-20260123-185750",
+  "validationProfiles": [
+    "rust-cargo"
+  ],
+  "requirements": [
+    {
+      "id": "REQ-01",
+      "title": "Remove pre-commit hook script",
+      "status": "in_progress",
+      "acceptanceCriteria": [
+        "File .githooks/pre-commit no longer exists",
+        "git commit succeeds without running validation checks"
+      ]
+    },
+    {
+      "id": "REQ-02",
+      "title": "Remove commit-msg hook script",
+      "status": "todo",
+      "acceptanceCriteria": [
+        "File .githooks/commit-msg no longer exists",
+        "Commits succeed without REQ-xx reference requirement"
+      ]
+    },
+    {
+      "id": "REQ-03",
+      "title": "Create pre-commit framework configuration",
+      "status": "todo",
+      "acceptanceCriteria": [
+        "File .pre-commit-config.yaml exists at repository root",
+        "Includes hook for cargo fmt --check",
+        "Includes hook for cargo clippy --all-targets --all-features -- -D warnings",
+        "Includes hook for cargo check --all-targets --all-features",
+        "Includes hook for cargo test --all-features",
+        "Running pre-commit run --all-files executes all checks"
+      ]
+    },
+    {
+      "id": "REQ-04",
+      "title": "Preserve .githooks directory structure",
+      "status": "todo",
+      "acceptanceCriteria": [
+        "Directory .githooks/ exists",
+        "Contains .gitkeep file"
+      ]
+    },
+    {
+      "id": "REQ-05",
+      "title": "Update documentation for opt-in pre-commit hooks",
+      "status": "todo",
+      "acceptanceCriteria": [
+        "README.md documents how to install pre-commit hooks (pre-commit install)",
+        "README.md explains that hooks are opt-in, not mandatory",
+        "README.md lists what checks the pre-commit hooks run"
+      ]
+    }
+  ]
+}
